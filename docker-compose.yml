@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  rabbitmq:
+    image: "rabbitmq:management"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "guest"
+
+  django:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - celery
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings
+    networks:
+      - microservices_network
+
+  celery:
+    build: .
+    command: celery -A core worker -l info
+    volumes:
+      - .:/app
+    depends_on:
+      - rabbitmq
+      - redis
+    networks:
+      - microservices_network
+
+  redis:
+    image: "redis:alpine"
+    networks:
+      - microservices_network
+
+networks:
+  microservices_network:
+    driver: bridge
